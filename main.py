@@ -1,7 +1,9 @@
 import random
-from telegram import Update, ParseMode
+from telegram import Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.error import Conflict, NetworkError, Unauthorized
 from keep_alive import keep_alive
+import time
 
 # Replace 'YOUR_BOT_TOKEN' with your actual bot token obtained from BotFather
 TOKEN = '7073748087:AAHMd-DY5eXlBjdxN_Q0xSRTQCrXESN1usk'
@@ -72,6 +74,21 @@ def help_command(update: Update, context: CallbackContext):
     """
     update.message.reply_text(help_text)
 
+def error_callback(update: Update, context: CallbackContext):
+    try:
+        raise context.error
+    except Conflict:
+        # Handle the conflict error by restarting the bot
+        print("Conflict error detected. Restarting the bot.")
+        context.bot.stop()
+        time.sleep(5)
+        main()
+    except NetworkError:
+        time.sleep(5)
+    except Unauthorized:
+        # Handle unauthorized error
+        pass
+
 def main():
     updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
@@ -88,9 +105,12 @@ def main():
     dp.add_handler(CommandHandler("list", list_names))
     dp.add_handler(CommandHandler("help", help_command))
     
+    dp.add_error_handler(error_callback)
+
     updater.start_polling()
     updater.idle()
 
 if __name__ == '__main__':
     keep_alive()  # Add this line to start the keep-alive server
     main()
+
